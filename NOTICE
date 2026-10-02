@@ -1,0 +1,8 @@
+This companion contains a maintained Java port of display-power logic from scrcpy.
+
+scrcpy is Copyright (C) 2018 Genymobile and contributors and is licensed under
+the Apache License, Version 2.0. The upstream project is available at:
+https://github.com/Genymobile/scrcpy
+
+The port is isolated in DisplayPower.java and retains the upstream physical
+display token, Android 14 DisplayControl fallback, and POWER_MODE_NORMAL logic.

@@ -1,0 +1,5 @@
+Display-power restoration code in DisplayPower.java is derived from scrcpy.
+
+scrcpy is Copyright (C) 2018 Genymobile and contributors.
+Licensed under the Apache License, Version 2.0.
+https://github.com/Genymobile/scrcpy

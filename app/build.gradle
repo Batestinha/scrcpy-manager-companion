@@ -1,0 +1,43 @@
+plugins {
+    id "com.android.application"
+}
+
+android {
+    namespace "com.diogobatista.scrcpymanager.companion"
+    compileSdk 37
+
+    defaultConfig {
+        applicationId "com.diogobatista.scrcpymanager.companion"
+        minSdk 26
+        targetSdk 37
+        versionCode 111
+        versionName "1.1.1"
+    }
+
+    buildFeatures { aidl true }
+
+    signingConfigs {
+        release {
+            if (System.getenv("COMPANION_STORE_FILE") != null) {
+                storeFile file(System.getenv("COMPANION_STORE_FILE"))
+                storePassword System.getenv("COMPANION_STORE_PASSWORD")
+                keyAlias "scrcpy-manager-companion"
+                keyPassword System.getenv("COMPANION_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (System.getenv("COMPANION_STORE_FILE") != null) signingConfig signingConfigs.release
+        }
+    }
+}
+
+dependencies {
+    compileOnly "androidx.annotation:annotation:1.9.1"
+    implementation "dev.rikka.shizuku:api:13.1.5"
+    implementation "dev.rikka.shizuku:provider:13.1.5"
+    testImplementation "junit:junit:4.13.2"
+}
