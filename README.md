@@ -8,6 +8,18 @@ screen off.
 The companion does not use a permanent notification or a standalone heartbeat.
 The desktop manager arms cable-loss protection only for the active session.
 
+## Manager provisioning contract
+
+Version 1.2.0 adds two exported broadcasts protected by
+`android.permission.DUMP`, so only ADB shell/root can use them:
+
+- `com.diogobatista.scrcpymanager.companion.action.STATUS`
+- `com.diogobatista.scrcpymanager.companion.action.START`
+
+Both return protocol-versioned JSON as ordered-broadcast result data. `START`
+binds the daemon when Shizuku is running and already authorized; it never opens
+the setup activity or prompts the user.
+
 ## Requirements
 
 - Android 8.0 (API 26) or newer
