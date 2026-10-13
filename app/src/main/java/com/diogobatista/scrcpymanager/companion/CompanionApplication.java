@@ -13,7 +13,7 @@ import rikka.shizuku.Shizuku;
 public final class CompanionApplication extends Application {
     private static final String TAG = "ScrcpyMgrCompanion";
     // Independent of the APK version. Bump when the daemon implementation must be replaced in place.
-    private static final int SERVICE_VERSION = 113;
+    private static final int SERVICE_VERSION = 130;
     private static volatile boolean binding;
 
     private static final ServiceConnection CONNECTION = new ServiceConnection() {

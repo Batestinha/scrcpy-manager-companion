@@ -10,11 +10,14 @@ android {
         applicationId "com.diogobatista.scrcpymanager.companion"
         minSdk 26
         targetSdk 37
-        versionCode 120
-        versionName "1.2.0"
+        versionCode 130
+        versionName "1.3.0"
     }
 
-    buildFeatures { aidl true }
+    buildFeatures {
+        aidl true
+        buildConfig true
+    }
 
     signingConfigs {
         release {
