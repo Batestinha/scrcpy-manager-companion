@@ -4,22 +4,25 @@ import android.system.Os;
 import android.system.OsConstants;
 import android.util.Log;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 /** A video-owned watch survives the host socket closing; it never uses a heartbeat. */
 final class CableLossGuard {
     private static final String TAG = "ScrcpyMgrCompanion";
     private static final File MARKER = new File("/data/local/tmp/scrcpy-manager-companion.cable-watch");
-    private Watch watch;
+    private volatile Watch watch;
+    private final HapticsGuard haptics;
     private volatile boolean stopping;
     private int disconnectedSamples;
+
+    CableLossGuard(HapticsGuard haptics) { this.haptics = haptics; }
+
+    boolean isWatching() { return watch != null; }
 
     synchronized void start() {
         try {
@@ -77,7 +80,7 @@ final class CableLossGuard {
         if (matches(old.videoPid, old.videoStart, true)) return;
         boolean restored = false;
         for (int attempt = 0; attempt < 20 && !restored; attempt++) {
-            restored = DisplayPower.restoreNormal();
+            restored = DisplayPower.restoreNormal() && haptics.restore();
             if (!restored) Thread.sleep(1000);
         }
         if (!restored) throw new IllegalStateException("Cable-loss display restoration failed");
@@ -109,28 +112,8 @@ final class CableLossGuard {
     }
 
     private static Boolean cable(String kind, String iface) throws Exception {
-        String dump = query("/system/bin/dumpsys", "usb".equals(kind) ? "usb" : "ethernet");
+        String dump = ShellCommand.run("/system/bin/dumpsys", "usb".equals(kind) ? "usb" : "ethernet");
         return "usb".equals(kind) ? CableState.usb(dump) : CableState.ethernet(dump, iface);
-    }
-
-    private static String query(String... command) throws Exception {
-        java.lang.Process process = new ProcessBuilder(command).redirectErrorStream(true).start();
-        ByteArrayOutputStream output = new ByteArrayOutputStream();
-        Thread reader = new Thread(() -> {
-            try {
-                byte[] buffer = new byte[8192];
-                int count;
-                while ((count = process.getInputStream().read(buffer)) != -1) output.write(buffer, 0, count);
-            } catch (Exception ignored) { }
-        }, "cable-query-output");
-        reader.setDaemon(true);
-        reader.start();
-        try {
-            if (!process.waitFor(3, TimeUnit.SECONDS)) throw new IllegalStateException("Cable state query timed out");
-            reader.join(500);
-            if (reader.isAlive() || process.exitValue() != 0) throw new IllegalStateException("Cable state query failed");
-            return output.toString("UTF-8");
-        } finally { process.destroy(); }
     }
 
     private void persist() throws Exception {

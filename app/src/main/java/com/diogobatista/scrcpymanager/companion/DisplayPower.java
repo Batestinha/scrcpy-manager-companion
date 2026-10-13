@@ -25,6 +25,17 @@ final class DisplayPower {
 
     private DisplayPower() { }
 
+    static Boolean isFauxOff() throws Exception {
+        Class<?> global = Class.forName("android.hardware.display.DisplayManagerGlobal");
+        Object manager = global.getMethod("getInstance").invoke(null);
+        Object info = global.getMethod("getDisplayInfo", int.class).invoke(manager, 0);
+        if (info == null) return null;
+        // Real sleep/doze must keep normal call/notification vibration behavior.
+        if (info.getClass().getField("state").getInt(info) != 2) return false; // Display.STATE_ON
+        return PhysicalDisplayState.allInternalDisplaysOff(
+                ShellCommand.run("/system/bin/dumpsys", "SurfaceFlinger", "--displays"));
+    }
+
     static boolean restoreNormal() {
         try {
             boolean multi = Build.VERSION.SDK_INT >= 29;

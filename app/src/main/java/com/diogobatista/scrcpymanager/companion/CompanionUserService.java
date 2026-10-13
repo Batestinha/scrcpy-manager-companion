@@ -30,8 +30,9 @@ public final class CompanionUserService extends ICompanionService.Stub {
     private final Object stateLock = new Object();
     private volatile boolean stopping;
     private volatile LocalServerSocket server;
-    private String armedSession;
-    private final CableLossGuard cableGuard = new CableLossGuard();
+    private volatile String armedSession;
+    private final HapticsGuard haptics = new HapticsGuard(this::ownsDisplaySession);
+    private final CableLossGuard cableGuard = new CableLossGuard(haptics);
 
     public CompanionUserService() { start(); }
     public CompanionUserService(Context ignored) { start(); }
@@ -46,6 +47,7 @@ public final class CompanionUserService extends ICompanionService.Stub {
         try {
             restoreStaleMarker();
             cableGuard.start();
+            haptics.start();
             server = new LocalServerSocket(SOCKET_NAME);
             while (!stopping) {
                 LocalSocket socket = server.accept();
@@ -56,6 +58,8 @@ public final class CompanionUserService extends ICompanionService.Stub {
         } catch (Throwable error) {
             if (!stopping) Log.e(TAG, "Companion socket stopped", error);
             restoreOwnedSession("service-failure");
+            cableGuard.shutdown();
+            haptics.shutdown();
         }
     }
 
@@ -77,7 +81,7 @@ public final class CompanionUserService extends ICompanionService.Stub {
                     hello = true;
                     write(writer, "HELLO 1");
                 } else if (hello && parts.length == 1 && "STATUS".equals(parts[0])) {
-                    write(writer, "STATUS ready 1.1.1 " + readFailure());
+                    write(writer, "STATUS ready " + BuildConfig.VERSION_NAME + " " + readFailure());
                 } else if (hello && line.startsWith("WATCH ")) {
                     String[] watch = line.split(" ");
                     if (watch.length != 6) throw new IllegalArgumentException("Invalid WATCH");
@@ -138,7 +142,7 @@ public final class CompanionUserService extends ICompanionService.Stub {
         if (armedSession == null && !MARKER.exists()) return true;
         String session = armedSession;
         for (int attempt = 1; attempt <= RESTORE_ATTEMPTS; attempt++) {
-            if (DisplayPower.restoreNormal()) {
+            if (DisplayPower.restoreNormal() && haptics.restore()) {
                 if (MARKER.exists() && !MARKER.delete()) Log.w(TAG, "Could not remove armed marker");
                 if (FAILURE.exists()) FAILURE.delete();
                 armedSession = null;
@@ -195,10 +199,15 @@ public final class CompanionUserService extends ICompanionService.Stub {
         writer.flush();
     }
 
+    private boolean ownsDisplaySession() {
+        return armedSession != null || cableGuard.isWatching();
+    }
+
     @Override public void destroy() {
         stopping = true;
         cableGuard.shutdown();
         restoreOwnedSession("service-destroyed");
+        haptics.shutdown();
         try { if (server != null) server.close(); } catch (Throwable ignored) { }
         System.exit(0);
     }
